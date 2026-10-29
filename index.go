@@ -14,13 +14,13 @@ import (
 // Entry is one runnable command and everything we know about it.
 type Entry struct {
 	Name    string // what you type
-	Path    string // resolved location ("" for builtins/aliases)
-	Kind    string // "bin", "builtin", "alias"
+	Path    string // resolved location, or a function's source file ("" for builtins/aliases)
+	Kind    string // "bin", "builtin", "alias", "function"
 	ManDesc string // one-line summary from the man page NAME section
 	ManSect string // man section the summary came from
 	Pkg     string // owning Homebrew formula/cask, if any
 	PkgDesc string // Homebrew description
-	Extra   string // alias expansion, etc.
+	Extra   string // alias expansion, function description, etc.
 }
 
 // Desc is the best single description for display.
@@ -36,6 +36,37 @@ func (e *Entry) Desc() string {
 	return ""
 }
 
+// Source names where the command comes from: its kind for anything the
+// shell provides, otherwise the tool or directory that installed it.
+func (e *Entry) Source() string {
+	if e.Kind != "bin" {
+		return e.Kind
+	}
+	if e.Pkg != "" {
+		return "brew"
+	}
+	dir := filepath.Dir(e.Path)
+	switch {
+	case dir == "/bin" || dir == "/sbin" || dir == "/usr/bin" || dir == "/usr/sbin" ||
+		strings.HasPrefix(dir, "/usr/libexec") || strings.HasPrefix(dir, "/System/"):
+		return "system"
+	case strings.Contains(dir, ".app/"):
+		return "app"
+	case strings.Contains(dir, "/node/") || strings.Contains(dir, "/node_modules/"):
+		return "npm"
+	case strings.Contains(strings.ToLower(dir), "/python"):
+		return "pip"
+	case strings.HasPrefix(dir, "/opt/homebrew/") || strings.HasPrefix(dir, "/home/linuxbrew/"):
+		return "brew"
+	case strings.HasPrefix(dir, "/usr/local/"):
+		return "local"
+	case filepath.Base(dir) == "bin":
+		// ~/.cargo/bin -> cargo, ~/go/bin -> go
+		return strings.TrimPrefix(filepath.Base(filepath.Dir(dir)), ".")
+	}
+	return filepath.Base(dir)
+}
+
 type Index struct {
 	Version int
 	Built   time.Time
@@ -43,7 +74,7 @@ type Index struct {
 	Entries []Entry
 }
 
-const indexVersion = 1
+const indexVersion = 2
 
 // staleAfter forces a periodic rebuild even if nothing obvious changed,
 // since man pages and brew descriptions can update without touching PATH dirs.
@@ -134,16 +165,18 @@ func buildIndex() *Index {
 		brew     map[string]string
 		builtins []string
 		aliases  map[string]string
+		funcs    map[string]funcInfo
 	)
-	wg.Add(5)
+	wg.Add(6)
 	go func() { defer wg.Done(); bins = scanPath() }()
 	go func() { defer wg.Done(); man = scanMan() }()
 	go func() { defer wg.Done(); brew = brewDescs() }()
 	go func() { defer wg.Done(); builtins = shellBuiltins() }()
 	go func() { defer wg.Done(); aliases = shellAliases() }()
+	go func() { defer wg.Done(); funcs = shellFunctions() }()
 	wg.Wait()
 
-	entries := make([]Entry, 0, len(bins)+len(builtins)+len(aliases))
+	entries := make([]Entry, 0, len(bins)+len(builtins)+len(aliases)+len(funcs))
 	seen := map[string]bool{}
 	add := func(e Entry) {
 		if mi, ok := man[e.Name]; ok {
@@ -153,9 +186,15 @@ func buildIndex() *Index {
 		entries = append(entries, e)
 	}
 
-	// Aliases and builtins shadow binaries in the shell, so list them first.
+	// Aliases, functions and builtins shadow binaries in the shell, so list
+	// them first, in the shell's own lookup order.
 	for name, exp := range aliases {
 		add(Entry{Name: name, Kind: "alias", Extra: exp})
+	}
+	for name, fi := range funcs {
+		if !seen[name] {
+			add(Entry{Name: name, Path: fi.src, Kind: "function", Extra: fi.desc})
+		}
 	}
 	for _, name := range builtins {
 		if !seen[name] {

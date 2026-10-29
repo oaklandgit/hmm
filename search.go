@@ -98,11 +98,11 @@ func (s *Searcher) Search(query string, limit int) []Result {
 		total *= cov * cov
 		e := c.d.entry
 		switch {
-		case e.ManDesc != "" || e.Kind == "alias":
+		case e.ManDesc != "" || e.Kind == "alias" || e.Kind == "function" && e.Extra != "":
 			total *= 1.15 // described in its own right
 		case e.PkgDesc != "" && e.Pkg == e.Name:
 			total *= 1.1 // a package's main binary
-		case e.PkgDesc == "":
+		case e.PkgDesc == "" && e.Extra == "":
 			total *= 0.9 // nothing but a name to go on
 		}
 		results[i] = Result{e, total}

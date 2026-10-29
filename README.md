@@ -13,6 +13,7 @@ description it can find, so a few keywords in any order narrow it down:
 | man pages  | the NAME-section summary (man(7) and mdoc(7), gzipped, `.so`)     |
 | Homebrew   | formula/cask description, matched by resolving the Cellar symlink |
 | your shell | builtins and reserved words (zsh, bash, fish), plus aliases       |
+| functions  | shell functions, described by the comment above them or, for Oh My Zsh plugins, the plugin's README |
 
 ## Install
 

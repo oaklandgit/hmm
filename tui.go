@@ -162,10 +162,7 @@ func (m model) renderRow(i int) string {
 		mark, ns = cursorMark+" ", selStyle
 	}
 	name := ns.Render(e.Name)
-	tag := ""
-	if e.Kind != "bin" {
-		tag = " " + tagStyle.Render("["+e.Kind+"]")
-	}
+	tag := " " + tagStyle.Render("["+e.Source()+"]")
 	used := 2 + lipgloss.Width(name) + lipgloss.Width(tag) + 2
 	desc := e.Desc()
 	if room := m.width - used - 1; room > 0 {
