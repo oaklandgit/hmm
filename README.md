@@ -25,6 +25,17 @@ description it can find, so a few keywords in any order narrow it down:
 go install github.com/oaklandgit/hmm@latest
 ```
 
+This puts the `hmm` binary in `$(go env GOPATH)/bin` (usually `~/go/bin`), or
+in `$GOBIN` if that's set. If `hmm` isn't found afterwards, add that directory
+to your `PATH`:
+
+```sh
+# ~/.zshrc  (or ~/.bashrc)
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+Then open a new terminal and check with `which hmm`.
+
 ## Use
 
 ```sh
