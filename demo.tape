@@ -37,7 +37,13 @@ Ctrl+U
 Sleep 500ms
 
 # Or start the picker empty and search as you type, peek at the man page,
-# then run what you chose
+# then run what you chose. (VHS's terminal draws only the first line of a
+# pager opened at the bottom of a full screen, so start this scene clear.)
+Hide
+Type "clear"
+Enter
+Sleep 500ms
+Show
 Type "hmm"
 Sleep 500ms
 Enter
