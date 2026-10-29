@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,6 +27,7 @@ var (
 type model struct {
 	searcher *Searcher
 	total    int
+	built    time.Time
 	input    textinput.Model
 	results  []Result
 	cursor   int
@@ -36,13 +38,13 @@ type model struct {
 	quitting bool
 }
 
-func newModel(s *Searcher, total int, query string) model {
+func newModel(s *Searcher, total int, built time.Time, query string) model {
 	ti := textinput.New()
 	ti.Prompt = "❯ "
 	ti.Placeholder = "describe what you want to do…"
 	ti.SetValue(query)
 	ti.Focus()
-	m := model{searcher: s, total: total, input: ti, width: 80, height: 20}
+	m := model{searcher: s, total: total, built: built, input: ti, width: 80, height: 20}
 	m.refresh()
 	return m
 }
@@ -147,7 +149,7 @@ func (m model) View() string {
 	b.WriteString("\n")
 	status := fmt.Sprintf("%d/%d", len(m.results), m.total)
 	if strings.TrimSpace(m.input.Value()) == "" {
-		status = fmt.Sprintf("%d commands indexed", m.total)
+		status = fmt.Sprintf("%d commands last indexed %s", m.total, m.built.Local().Format("Jan 2, 3:04PM"))
 	}
 	b.WriteString(countStyle.Render(status + " · enter select · ctrl+o man page · esc quit"))
 	return b.String()
@@ -210,8 +212,8 @@ func truncate(styled string, n int) string {
 	return lipgloss.NewStyle().MaxWidth(n).Render(styled)
 }
 
-func runTUI(s *Searcher, total int, query string) (string, error) {
-	p := tea.NewProgram(newModel(s, total, query), tea.WithOutput(os.Stderr), tea.WithInputTTY())
+func runTUI(s *Searcher, total int, built time.Time, query string) (string, error) {
+	p := tea.NewProgram(newModel(s, total, built, query), tea.WithOutput(os.Stderr), tea.WithInputTTY())
 	final, err := p.Run()
 	if err != nil {
 		return "", err

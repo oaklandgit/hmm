@@ -65,7 +65,7 @@ func main() {
 		return
 	}
 
-	chosen, err := runTUI(s, len(idx.Entries), query)
+	chosen, err := runTUI(s, len(idx.Entries), idx.Built, query)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "hmm:", err)
 		os.Exit(1)
