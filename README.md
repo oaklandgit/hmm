@@ -2,6 +2,8 @@
 
 Find the command you're thinking of by describing it.
 
+![demo](demo.gif)
+
 ```
 $ hmm -l list open files
 lsof                     list open files
