@@ -41,18 +41,22 @@ hmm -l kill by name    # print matches, no UI
 hmm --reindex          # force a rebuild
 ```
 
-In the finder: type to filter, ↑/↓ to move, **enter** prints the command to
-stdout, **ctrl+o** opens its man page, **esc** quits.
+In the finder: type to filter, ↑/↓ to move, **enter** chooses the command,
+**ctrl+o** opens its man page, **esc** quits.
 
-### Shell keybinding
+### Shell integration
 
 ```sh
 # ~/.zshrc  (or --init bash in ~/.bashrc)
 eval "$(hmm --init zsh)"
 ```
 
-Press **Ctrl-G** to open the finder seeded with whatever you've typed, and the
-chosen command replaces the line.
+With this in zsh, the command you choose appears on your next prompt, ready to
+run or to add arguments to. Without it (or in bash), hmm prints the command
+instead, which also makes it easy to use in scripts: `cmd=$(hmm)`.
+
+In both shells, **Ctrl-G** opens the finder seeded with whatever you've typed,
+and the chosen command replaces the line.
 
 ## How matching works
 

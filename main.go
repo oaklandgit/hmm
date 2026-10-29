@@ -11,10 +11,11 @@ import (
 const usage = `hmm — find any command on your system by describing it
 
 Usage:
-  hmm [query...]          interactive search (prints selection to stdout)
+  hmm [query...]          interactive search (prints selection to stdout,
+                          or puts it on the next prompt with --init zsh)
   hmm -l [query...]       print ranked matches and exit
   hmm --reindex           rebuild the index now
-  hmm --init zsh|bash     print a shell keybinding (Ctrl-G) to source
+  hmm --init zsh|bash     print shell integration (Ctrl-G keybinding) to source
 
 Examples:
   hmm compress image
@@ -77,11 +78,21 @@ func main() {
 }
 
 // shellInit binds Ctrl-G to open the finder, seeded with whatever is on the
-// command line, and replaces the line with the chosen command.
+// command line, and replaces the line with the chosen command. In zsh it
+// also wraps hmm so a choice made at the prompt lands on the next prompt,
+// ready to run or edit; flags and pipes get the plain command.
 var shellInit = map[string]string{
-	"zsh": `_hmm_widget() {
+	"zsh": `hmm() {
+  local a sel
+  for a in "$@"; do
+    [[ $a == -* ]] && { command hmm "$@"; return; }
+  done
+  [[ -t 1 ]] || { command hmm "$@"; return; }
+  sel=$(command hmm "$@") && [[ -n $sel ]] && print -z -- "$sel "
+}
+_hmm_widget() {
   local sel
-  sel=$(hmm -- "$BUFFER" </dev/tty 2>/dev/tty) && [[ -n $sel ]] && {
+  sel=$(command hmm -- "$BUFFER" </dev/tty 2>/dev/tty) && [[ -n $sel ]] && {
     BUFFER="$sel "
     CURSOR=${#BUFFER}
   }
@@ -92,7 +103,7 @@ bindkey '^G' _hmm_widget
 `,
 	"bash": `_hmm_widget() {
   local sel
-  sel=$(hmm -- "$READLINE_LINE" </dev/tty 2>/dev/tty) && [[ -n $sel ]] && {
+  sel=$(command hmm -- "$READLINE_LINE" </dev/tty 2>/dev/tty) && [[ -n $sel ]] && {
     READLINE_LINE="$sel "
     READLINE_POINT=${#READLINE_LINE}
   }
