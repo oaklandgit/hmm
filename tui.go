@@ -21,7 +21,11 @@ var (
 	detailStyle = re.NewStyle().Foreground(lipgloss.Color("240")).Italic(true)
 	countStyle  = re.NewStyle().Foreground(lipgloss.Color("240"))
 	cursorMark  = re.NewStyle().Foreground(lipgloss.Color("212")).Render("▌")
+	boxStyle    = re.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("240")).Padding(0, 1)
 )
+
+// boxChrome is the width the box's border and padding take from each row.
+const boxChrome = 4
 
 type model struct {
 	searcher *Searcher
@@ -55,7 +59,7 @@ func (m *model) refresh() {
 }
 
 func (m model) listHeight() int {
-	return max(3, min(15, m.height-4))
+	return max(3, min(15, m.height-6))
 }
 
 func (m model) Init() tea.Cmd { return textinput.Blink }
@@ -137,15 +141,15 @@ func (m model) View() string {
 	b.WriteString(m.input.View())
 	b.WriteString("\n")
 
+	// The list keeps a fixed height, framed so it reads as a list even
+	// before there's anything in it.
 	h := m.listHeight()
-	end := min(len(m.results), m.offset+h)
-	for i := m.offset; i < end; i++ {
-		b.WriteString(m.renderRow(i))
-		b.WriteString("\n")
+	rows := make([]string, h)
+	for i := m.offset; i < min(len(m.results), m.offset+h); i++ {
+		rows[i-m.offset] = m.renderRow(i)
 	}
-	for i := end - m.offset; i < h; i++ {
-		b.WriteString("\n")
-	}
+	b.WriteString(boxStyle.Width(m.width - 2).Render(strings.Join(rows, "\n")))
+	b.WriteString("\n")
 
 	if len(m.results) > 0 {
 		b.WriteString(truncate(detailStyle.Render(details(m.results[m.cursor].Entry)), m.width))
@@ -168,7 +172,7 @@ func (m model) renderRow(i int) string {
 	name := ns.Render(e.Name)
 	used := 2 + lipgloss.Width(name) + 2
 	desc := e.Desc()
-	if room := m.width - used - 1; room > 0 {
+	if room := m.width - boxChrome - used - 1; room > 0 {
 		desc = truncatePlain(desc, room)
 	} else {
 		desc = ""
