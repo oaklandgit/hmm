@@ -28,4 +28,14 @@ Sleep 2s
 Down@600ms 2
 Sleep 1s
 Enter
+Sleep 2s
+
+# Or start the finder empty and search as you type
+Type "hmm"
+Sleep 500ms
+Enter
+Sleep 2s
+Type "copy to clipboard"
+Sleep 1.5s
+Enter
 Sleep 3s
