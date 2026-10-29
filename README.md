@@ -72,6 +72,10 @@ With this in zsh, the command you choose appears on your next prompt, ready to
 run or to add arguments to. Without it (or in bash), hmm prints the command
 instead, which also makes it easy to use in scripts: `cmd=$(hmm)`.
 
+This works through a small wrapper, so `which hmm` now prints
+`hmm: aliased to _hmm_prompt` instead of a path; `which -a hmm` shows the
+program too.
+
 In both shells, **Ctrl-G** opens the picker seeded with whatever you've typed,
 and the chosen command replaces the line.
 

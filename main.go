@@ -80,9 +80,11 @@ func main() {
 // shellInit binds Ctrl-G to open the picker, seeded with whatever is on the
 // command line, and replaces the line with the chosen command. In zsh it
 // also wraps hmm so a choice made at the prompt lands on the next prompt,
-// ready to run or edit; flags and pipes get the plain command.
+// ready to run or edit; flags and pipes get the plain command. The wrapper
+// is reached through an alias so "which hmm" prints one line naming it,
+// rather than the whole function body.
 var shellInit = map[string]string{
-	"zsh": `hmm() {
+	"zsh": `_hmm_prompt() {
   local a sel
   for a in "$@"; do
     [[ $a == -* ]] && { command hmm "$@"; return; }
@@ -90,6 +92,7 @@ var shellInit = map[string]string{
   [[ -t 1 ]] || { command hmm "$@"; return; }
   sel=$(command hmm "$@") && [[ -n $sel ]] && print -z -- "$sel "
 }
+alias hmm=_hmm_prompt
 _hmm_widget() {
   local sel
   sel=$(command hmm -- "$BUFFER" </dev/tty 2>/dev/tty) && [[ -n $sel ]] && {
