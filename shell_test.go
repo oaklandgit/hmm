@@ -68,3 +68,22 @@ func TestAffixes(t *testing.T) {
 		}
 	}
 }
+
+func TestShellUnquote(t *testing.T) {
+	for in, want := range map[string]string{
+		`'git status'`:                       `git status`,
+		`ls`:                                 `ls`,
+		`'awk '\''{print $1}'\'' file'`:      `awk '{print $1}' file`,
+		`$'line one\n  it\'s two'`:           "line one\n  it's two",
+		`"say \"hi\" to $USER"`:              `say "hi" to $USER`,
+		`grep\ -E`:                           `grep -E`,
+		`'LANG=C git branch -vv | grep ":"'`: `LANG=C git branch -vv | grep ":"`,
+	} {
+		if got, ok := shellUnquote(in); !ok || got != want {
+			t.Errorf("shellUnquote(%s) = %q, %v, want %q", in, got, ok, want)
+		}
+	}
+	if _, ok := shellUnquote(`'unfinished`); ok {
+		t.Error("open quote reported complete")
+	}
+}

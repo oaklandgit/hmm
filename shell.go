@@ -105,7 +105,12 @@ func shellAliases() map[string]string {
 		return nil
 	}
 	aliases := map[string]string{}
+	var pending string
 	for _, line := range strings.Split(string(out), "\n") {
+		// A quoted value can span lines (bash prints newlines literally).
+		if pending != "" {
+			line = pending + "\n" + line
+		}
 		line = strings.TrimPrefix(line, "alias ")
 		name, val, ok := strings.Cut(line, "=")
 		if !ok {
@@ -115,13 +120,75 @@ func shellAliases() map[string]string {
 				continue
 			}
 		}
-		name = strings.Trim(name, `'"`)
+		val, complete := shellUnquote(val)
+		if !complete {
+			pending = "alias " + line
+			continue
+		}
+		pending = ""
+		name, _ = shellUnquote(name)
 		if name == "" || strings.ContainsAny(name, " \t") {
 			continue
 		}
-		aliases[name] = "alias for: " + strings.Trim(val, `'"`)
+		aliases[name] = "alias for: " + strings.Join(strings.Fields(val), " ")
 	}
 	return aliases
+}
+
+// shellUnquote undoes the quoting shells use when printing alias values:
+// '...' (with '\” for embedded quotes), $'...' with backslash escapes,
+// "...", and backslash-escaped bare characters. ok is false if a quote is
+// left open.
+func shellUnquote(s string) (string, bool) {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c == '\'':
+			j := strings.IndexByte(s[i+1:], '\'')
+			if j < 0 {
+				return b.String(), false
+			}
+			b.WriteString(s[i+1 : i+1+j])
+			i += j + 1
+		case c == '$' && i+1 < len(s) && s[i+1] == '\'':
+			i += 2
+			for ; i < len(s) && s[i] != '\''; i++ {
+				if s[i] == '\\' && i+1 < len(s) {
+					i++
+					switch s[i] {
+					case 'n':
+						b.WriteByte('\n')
+					case 't':
+						b.WriteByte('\t')
+					default:
+						b.WriteByte(s[i])
+					}
+					continue
+				}
+				b.WriteByte(s[i])
+			}
+			if i >= len(s) {
+				return b.String(), false
+			}
+		case c == '"':
+			i++
+			for ; i < len(s) && s[i] != '"'; i++ {
+				if s[i] == '\\' && i+1 < len(s) && strings.IndexByte(`"\\$`+"`", s[i+1]) >= 0 {
+					i++
+				}
+				b.WriteByte(s[i])
+			}
+			if i >= len(s) {
+				return b.String(), false
+			}
+		case c == '\\' && i+1 < len(s):
+			i++
+			b.WriteByte(s[i])
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String(), true
 }
 
 // funcInfo is a shell function: where it was defined and what it does.
