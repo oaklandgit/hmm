@@ -142,16 +142,41 @@ func init() {
 }
 
 // matchTerm returns how well a single query term matches a doc, or 0.
-// Synonyms are tried at a discount if the literal term doesn't match.
+// Synonyms are tried at a discount unless the name already matched.
 func matchTerm(d *doc, term string) float64 {
 	best := matchLiteral(d, term)
-	if best >= 30 {
+	if best >= 55 {
 		return best
 	}
 	for _, syn := range synonyms[term] {
-		if sc := matchLiteral(d, syn) * 0.6; sc > best {
+		if sc := matchSynonym(d, syn) * 0.6; sc > best {
 			best = sc
 		}
+	}
+	return best
+}
+
+// matchSynonym is matchLiteral without the partial name matches: synonyms
+// include short command names like "cp" and "rm", which would otherwise
+// match every name that happens to start with them (cpan, rmdir).
+func matchSynonym(d *doc, syn string) float64 {
+	if d.name == syn {
+		return 100
+	}
+	best := 0.0
+	for _, p := range d.nameParts {
+		if p == syn {
+			best = 55
+		}
+	}
+	for _, w := range d.words {
+		if len(syn) < 3 {
+			if w == syn {
+				best = max(best, 30)
+			}
+			continue
+		}
+		best = max(best, matchWord(w, syn))
 	}
 	return best
 }

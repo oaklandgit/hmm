@@ -63,6 +63,25 @@ func TestNameSubstringIsWeak(t *testing.T) {
 	}
 }
 
+func TestShortSynonymIsWholeNameOnly(t *testing.T) {
+	// "cp" is a synonym for "copy": it should find cp itself, not every
+	// name that starts with "cp".
+	s := NewSearcher(&Index{Entries: []Entry{
+		{Name: "cpan", Kind: "bin", ManDesc: "easily interact with CPAN from the command line"},
+		{Name: "cpuctl", Kind: "bin", ManDesc: "program to control CPUs"},
+		{Name: "dd", Kind: "bin", ManDesc: "convert and copy a file"},
+		{Name: "cp", Kind: "bin", ManDesc: "copy files"},
+	}})
+	if got := top(s, "copy"); got != "cp" {
+		t.Errorf("got %q, want cp", got)
+	}
+	for _, r := range s.Search("copy", 0) {
+		if n := r.Entry.Name; n == "cpan" || n == "cpuctl" {
+			t.Errorf("%s matched copy", n)
+		}
+	}
+}
+
 func TestEditDistance(t *testing.T) {
 	for _, c := range []struct {
 		a, b string
