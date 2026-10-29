@@ -1,0 +1,220 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+// The UI draws on stderr so stdout stays clean for the selected command.
+var (
+	re          = lipgloss.NewRenderer(os.Stderr)
+	nameStyle   = re.NewStyle().Bold(true)
+	selStyle    = re.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
+	descStyle   = re.NewStyle().Foreground(lipgloss.Color("245"))
+	tagStyle    = re.NewStyle().Foreground(lipgloss.Color("108"))
+	detailStyle = re.NewStyle().Foreground(lipgloss.Color("240")).Italic(true)
+	countStyle  = re.NewStyle().Foreground(lipgloss.Color("240"))
+	cursorMark  = re.NewStyle().Foreground(lipgloss.Color("212")).Render("▌")
+)
+
+type model struct {
+	searcher *Searcher
+	total    int
+	input    textinput.Model
+	results  []Result
+	cursor   int
+	offset   int
+	width    int
+	height   int
+	chosen   string
+	quitting bool
+}
+
+func newModel(s *Searcher, total int, query string) model {
+	ti := textinput.New()
+	ti.Prompt = "❯ "
+	ti.Placeholder = "describe what you want to do…"
+	ti.SetValue(query)
+	ti.Focus()
+	m := model{searcher: s, total: total, input: ti, width: 80, height: 20}
+	m.refresh()
+	return m
+}
+
+func (m *model) refresh() {
+	m.results = m.searcher.Search(m.input.Value(), 200)
+	m.cursor, m.offset = 0, 0
+}
+
+func (m model) listHeight() int {
+	return max(3, min(15, m.height-4))
+}
+
+func (m model) Init() tea.Cmd { return textinput.Blink }
+
+type manDone struct{}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		// Some ptys report 0x0; keep the defaults rather than render nothing.
+		if msg.Width > 0 && msg.Height > 0 {
+			m.width, m.height = msg.Width, msg.Height
+		}
+		return m, nil
+	case manDone:
+		return m, nil
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "esc":
+			m.quitting = true
+			return m, tea.Quit
+		case "enter":
+			if len(m.results) > 0 {
+				m.chosen = m.results[m.cursor].Entry.Name
+			}
+			m.quitting = true
+			return m, tea.Quit
+		case "up", "ctrl+p", "ctrl+k":
+			m.move(-1)
+			return m, nil
+		case "down", "ctrl+n", "ctrl+j", "tab":
+			m.move(1)
+			return m, nil
+		case "pgup":
+			m.move(-m.listHeight())
+			return m, nil
+		case "pgdown":
+			m.move(m.listHeight())
+			return m, nil
+		case "ctrl+o":
+			if len(m.results) > 0 {
+				c := exec.Command("man", m.results[m.cursor].Entry.Name)
+				return m, tea.ExecProcess(c, func(error) tea.Msg { return manDone{} })
+			}
+			return m, nil
+		}
+	}
+	prev := m.input.Value()
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	if m.input.Value() != prev {
+		m.refresh()
+	}
+	return m, cmd
+}
+
+func (m *model) move(delta int) {
+	if len(m.results) == 0 {
+		return
+	}
+	m.cursor = max(0, min(len(m.results)-1, m.cursor+delta))
+	h := m.listHeight()
+	if m.cursor < m.offset {
+		m.offset = m.cursor
+	} else if m.cursor >= m.offset+h {
+		m.offset = m.cursor - h + 1
+	}
+}
+
+func (m model) View() string {
+	if m.quitting {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(m.input.View())
+	b.WriteString("\n")
+
+	h := m.listHeight()
+	end := min(len(m.results), m.offset+h)
+	for i := m.offset; i < end; i++ {
+		b.WriteString(m.renderRow(i))
+		b.WriteString("\n")
+	}
+	for i := end - m.offset; i < h; i++ {
+		b.WriteString("\n")
+	}
+
+	if len(m.results) > 0 {
+		b.WriteString(truncate(detailStyle.Render(details(m.results[m.cursor].Entry)), m.width))
+	}
+	b.WriteString("\n")
+	status := fmt.Sprintf("%d/%d", len(m.results), m.total)
+	if strings.TrimSpace(m.input.Value()) == "" {
+		status = fmt.Sprintf("%d commands indexed", m.total)
+	}
+	b.WriteString(countStyle.Render(status + " · enter select · ctrl+o man page · esc quit"))
+	return b.String()
+}
+
+func (m model) renderRow(i int) string {
+	e := m.results[i].Entry
+	mark, ns := "  ", nameStyle
+	if i == m.cursor {
+		mark, ns = cursorMark+" ", selStyle
+	}
+	name := ns.Render(e.Name)
+	tag := ""
+	if e.Kind != "bin" {
+		tag = " " + tagStyle.Render("["+e.Kind+"]")
+	}
+	used := 2 + lipgloss.Width(name) + lipgloss.Width(tag) + 2
+	desc := e.Desc()
+	if room := m.width - used - 1; room > 0 {
+		desc = truncatePlain(desc, room)
+	} else {
+		desc = ""
+	}
+	return mark + name + tag + "  " + descStyle.Render(desc)
+}
+
+func details(e *Entry) string {
+	var parts []string
+	if e.Path != "" {
+		parts = append(parts, e.Path)
+	}
+	if e.ManSect != "" {
+		parts = append(parts, fmt.Sprintf("man %s(%s)", e.Name, e.ManSect))
+	}
+	if e.Pkg != "" {
+		p := "brew: " + e.Pkg
+		if e.PkgDesc != "" && e.PkgDesc != e.Desc() {
+			p += " — " + e.PkgDesc
+		}
+		parts = append(parts, p)
+	}
+	if e.Kind == "alias" {
+		parts = append(parts, e.Extra)
+	}
+	return strings.Join(parts, " · ")
+}
+
+func truncatePlain(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	if n <= 1 {
+		return "…"
+	}
+	return string(r[:n-1]) + "…"
+}
+
+func truncate(styled string, n int) string {
+	return lipgloss.NewStyle().MaxWidth(n).Render(styled)
+}
+
+func runTUI(s *Searcher, total int, query string) (string, error) {
+	p := tea.NewProgram(newModel(s, total, query), tea.WithOutput(os.Stderr), tea.WithInputTTY())
+	final, err := p.Run()
+	if err != nil {
+		return "", err
+	}
+	return final.(model).chosen, nil
+}
