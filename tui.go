@@ -18,7 +18,6 @@ var (
 	nameStyle   = re.NewStyle().Bold(true)
 	selStyle    = re.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
 	descStyle   = re.NewStyle().Foreground(lipgloss.Color("245"))
-	tagStyle    = re.NewStyle().Foreground(lipgloss.Color("108"))
 	detailStyle = re.NewStyle().Foreground(lipgloss.Color("240")).Italic(true)
 	countStyle  = re.NewStyle().Foreground(lipgloss.Color("240"))
 	cursorMark  = re.NewStyle().Foreground(lipgloss.Color("212")).Render("▌")
@@ -36,6 +35,7 @@ type model struct {
 	height   int
 	chosen   string
 	quitting bool
+	peeking  bool // a man page is open; draw nothing so the finder redraws in place
 }
 
 func newModel(s *Searcher, total int, built time.Time, query string) model {
@@ -71,6 +71,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case manDone:
+		m.peeking = false
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -97,6 +98,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "ctrl+o":
 			if len(m.results) > 0 {
+				// Blank the finder first: bubbletea draws the next frame where
+				// the command left the cursor, below any lines still on screen.
+				m.peeking = true
 				c := exec.Command("man", m.results[m.cursor].Entry.Name)
 				return m, tea.ExecProcess(c, func(error) tea.Msg { return manDone{} })
 			}
@@ -126,7 +130,7 @@ func (m *model) move(delta int) {
 }
 
 func (m model) View() string {
-	if m.quitting {
+	if m.quitting || m.peeking {
 		return ""
 	}
 	var b strings.Builder
@@ -162,36 +166,36 @@ func (m model) renderRow(i int) string {
 		mark, ns = cursorMark+" ", selStyle
 	}
 	name := ns.Render(e.Name)
-	tag := " " + tagStyle.Render("["+e.Source()+"]")
-	used := 2 + lipgloss.Width(name) + lipgloss.Width(tag) + 2
+	used := 2 + lipgloss.Width(name) + 2
 	desc := e.Desc()
 	if room := m.width - used - 1; room > 0 {
 		desc = truncatePlain(desc, room)
 	} else {
 		desc = ""
 	}
-	return mark + name + tag + "  " + descStyle.Render(desc)
+	return mark + name + "  " + descStyle.Render(desc)
 }
 
+// details describes the highlighted entry as "source: where · more",
+// e.g. "system: /usr/bin/cal · man cal(1)" or "alias for: git status".
 func details(e *Entry) string {
+	if e.Kind == "alias" {
+		return e.Extra
+	}
 	var parts []string
 	if e.Path != "" {
 		parts = append(parts, e.Path)
 	}
+	if e.Pkg != "" && e.Pkg != e.Name {
+		parts = append(parts, "from "+e.Pkg)
+	}
 	if e.ManSect != "" {
 		parts = append(parts, fmt.Sprintf("man %s(%s)", e.Name, e.ManSect))
 	}
-	if e.Pkg != "" {
-		p := "brew: " + e.Pkg
-		if e.PkgDesc != "" && e.PkgDesc != e.Desc() {
-			p += " — " + e.PkgDesc
-		}
-		parts = append(parts, p)
+	if len(parts) == 0 {
+		return e.Source()
 	}
-	if e.Kind == "alias" {
-		parts = append(parts, e.Extra)
-	}
-	return strings.Join(parts, " · ")
+	return e.Source() + ": " + strings.Join(parts, " · ")
 }
 
 func truncatePlain(s string, n int) string {

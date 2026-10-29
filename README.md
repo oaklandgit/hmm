@@ -15,9 +15,10 @@ description it can find, so a few keywords in any order narrow it down:
 | your shell | builtins and reserved words (zsh, bash, fish), plus aliases                               |
 | functions  | shell functions, described by fish, an Oh My Zsh plugin's README, or a nearby comment     |
 
-Each result is labeled with where it comes from: `system` for what came with
-the OS, `brew`, `alias`, `builtin`, `function`, or the tool that installed it
-(`cargo`, `npm`, `pip`, `bun`, `go`, `app`, `local`, …).
+The line under the results says where the highlighted command comes from:
+`system` for what came with the OS, `brew`, `alias`, `builtin`, `function`, or
+the tool that installed it (`cargo`, `npm`, `pip`, `bun`, `go`, `app`,
+`local`, …).
 
 ## Install
 
@@ -47,6 +48,18 @@ hmm --reindex          # force a rebuild
 
 In the finder: type to filter, ↑/↓ to move, **enter** chooses the command,
 **ctrl+o** opens its man page, **esc** quits.
+
+### Man pages
+
+Not sure a result is the right one? Press **ctrl+o** to read its man page
+without leaving the finder. It runs `man` on the highlighted command, so your
+usual pager (`$MANPAGER` or `$PAGER`) is used. Quit the pager (usually **q**)
+to return to the finder with your query and selection as you left them.
+
+The line under the results shows whether the highlighted command has a page,
+and in which section, e.g. `system: /usr/bin/cal · man cal(1)`. On macOS,
+shell builtins open the shared `builtin` page; aliases and shell functions
+usually have no page, so ctrl+o just returns to the finder.
 
 ### Shell integration
 
