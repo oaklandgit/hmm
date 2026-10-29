@@ -7,13 +7,17 @@ Solves the problem of "hmm, what was that CLI command I'm looking for?" Now you 
 hmm indexes every executable your shell can reach and attaches whatever
 description it can find, so a few keywords in any order narrow it down:
 
-| Source     | What it contributes                                               |
-| ---------- | ----------------------------------------------------------------- |
-| `$PATH`    | every executable, in shell precedence order                       |
-| man pages  | the NAME-section summary (man(7) and mdoc(7), gzipped, `.so`)     |
-| Homebrew   | formula/cask description, matched by resolving the Cellar symlink |
-| your shell | builtins and reserved words (zsh, bash, fish), plus aliases       |
-| functions  | shell functions, described by the comment above them or, for Oh My Zsh plugins, the plugin's README |
+| Source     | What it contributes                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| `$PATH`    | every executable, in shell precedence order                                               |
+| man pages  | the NAME-section summary (man(7) and mdoc(7), gzipped, `.so`)                             |
+| Homebrew   | formula/cask description, matched by resolving the Cellar symlink                         |
+| your shell | builtins and reserved words (zsh, bash, fish), plus aliases                               |
+| functions  | shell functions, described by fish, an Oh My Zsh plugin's README, or a nearby comment     |
+
+Each result is labeled with where it comes from: `system` for what came with
+the OS, `brew`, `alias`, `builtin`, `function`, or the tool that installed it
+(`cargo`, `npm`, `pip`, `bun`, `go`, `app`, `local`, …).
 
 ## Install
 
@@ -73,3 +77,5 @@ and the chosen command replaces the line.
 Stored at `~/Library/Caches/hmm/index.gob` (or `$XDG_CACHE_HOME`). It's
 rebuilt automatically when `$PATH` changes, when anything is installed into or
 removed from a `$PATH` directory, or after a week. Building takes about a second.
+Changes to your aliases or shell functions aren't detected, so run
+`hmm --reindex` after editing your shell config.
