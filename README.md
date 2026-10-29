@@ -40,26 +40,26 @@ Then open a new terminal and check with `which hmm`.
 ## Use
 
 ```sh
-hmm                    # interactive finder
+hmm                    # interactive picker
 hmm compress image     # start with a query
 hmm -l kill by name    # print matches, no UI
 hmm --reindex          # force a rebuild
 ```
 
-In the finder: type to filter, ↑/↓ to move, **enter** chooses the command,
+In the picker: type to filter, ↑/↓ to move, **enter** chooses the command,
 **ctrl+o** opens its man page, **esc** quits.
 
 ### Man pages
 
 Not sure a result is the right one? Press **ctrl+o** to read its man page
-without leaving the finder. It runs `man` on the highlighted command, so your
+without leaving the picker. It runs `man` on the highlighted command, so your
 usual pager (`$MANPAGER` or `$PAGER`) is used. Quit the pager (usually **q**)
-to return to the finder with your query and selection as you left them.
+to return to the picker with your query and selection as you left them.
 
 The line under the results shows whether the highlighted command has a page,
 and in which section, e.g. `system: /usr/bin/cal · man cal(1)`. On macOS,
 shell builtins open the shared `builtin` page; aliases and shell functions
-usually have no page, so ctrl+o just returns to the finder.
+usually have no page, so ctrl+o just returns to the picker.
 
 ### Shell integration
 
@@ -72,7 +72,7 @@ With this in zsh, the command you choose appears on your next prompt, ready to
 run or to add arguments to. Without it (or in bash), hmm prints the command
 instead, which also makes it easy to use in scripts: `cmd=$(hmm)`.
 
-In both shells, **Ctrl-G** opens the finder seeded with whatever you've typed,
+In both shells, **Ctrl-G** opens the picker seeded with whatever you've typed,
 and the chosen command replaces the line.
 
 ## How matching works

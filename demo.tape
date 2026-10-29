@@ -36,7 +36,7 @@ Sleep 2s
 Ctrl+U
 Sleep 500ms
 
-# Or start the finder empty and search as you type, peek at the man page,
+# Or start the picker empty and search as you type, peek at the man page,
 # then run what you chose
 Type "hmm"
 Sleep 500ms

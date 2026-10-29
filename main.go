@@ -27,7 +27,7 @@ Flags:
 
 func main() {
 	var (
-		list    = flag.Bool("l", false, "print matches instead of opening the interactive finder")
+		list    = flag.Bool("l", false, "print matches instead of opening the interactive picker")
 		limit   = flag.Int("n", 20, "max results with -l")
 		reindex = flag.Bool("reindex", false, "rebuild the command index")
 		initSh  = flag.String("init", "", "print shell integration for `shell` (zsh, bash)")
@@ -77,7 +77,7 @@ func main() {
 	fmt.Println(chosen)
 }
 
-// shellInit binds Ctrl-G to open the finder, seeded with whatever is on the
+// shellInit binds Ctrl-G to open the picker, seeded with whatever is on the
 // command line, and replaces the line with the chosen command. In zsh it
 // also wraps hmm so a choice made at the prompt lands on the next prompt,
 // ready to run or edit; flags and pipes get the plain command.

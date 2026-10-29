@@ -35,7 +35,7 @@ type model struct {
 	height   int
 	chosen   string
 	quitting bool
-	peeking  bool // a man page is open; draw nothing so the finder redraws in place
+	peeking  bool // a man page is open; draw nothing so the picker redraws in place
 }
 
 func newModel(s *Searcher, total int, built time.Time, query string) model {
@@ -98,7 +98,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "ctrl+o":
 			if len(m.results) > 0 {
-				// Blank the finder first: bubbletea draws the next frame where
+				// Blank the picker first: bubbletea draws the next frame where
 				// the command left the cursor, below any lines still on screen.
 				m.peeking = true
 				c := exec.Command("man", m.results[m.cursor].Entry.Name)
