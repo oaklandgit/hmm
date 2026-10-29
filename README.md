@@ -1,25 +1,18 @@
 # hmm
 
-Find the command you're thinking of by describing it.
+Solves the problem of "hmm, what was that CLI command I'm looking for?" Now you can just start describing it.
 
 ![demo](demo.gif)
-
-```
-$ hmm -l list open files
-lsof                     list open files
-fuser                    list process IDs of all processes that have one or more files open
-open                     open files and directories
-```
 
 hmm indexes every executable your shell can reach and attaches whatever
 description it can find, so a few keywords in any order narrow it down:
 
-| Source          | What it contributes                                              |
-|-----------------|------------------------------------------------------------------|
-| `$PATH`         | every executable, in shell precedence order                      |
-| man pages       | the NAME-section summary (man(7) and mdoc(7), gzipped, `.so`)    |
-| Homebrew        | formula/cask description, matched by resolving the Cellar symlink |
-| your shell      | builtins and reserved words (zsh, bash, fish), plus aliases      |
+| Source     | What it contributes                                               |
+| ---------- | ----------------------------------------------------------------- |
+| `$PATH`    | every executable, in shell precedence order                       |
+| man pages  | the NAME-section summary (man(7) and mdoc(7), gzipped, `.so`)     |
+| Homebrew   | formula/cask description, matched by resolving the Cellar symlink |
+| your shell | builtins and reserved words (zsh, bash, fish), plus aliases       |
 
 ## Install
 
@@ -62,12 +55,12 @@ chosen command replaces the line.
 
 ## How matching works
 
-- Every query word must hit the name or a description *somewhere*, in any
+- Every query word must hit the name or a description _somewhere_, in any
   order. Results that miss words still show, but rank well below full matches.
 - Name matches beat description matches; rare words count more than common ones.
-- Forgiving: prefixes (`compress` → *compression*), stems (`deleting` →
-  *delete*), one or two typos, and a small table of synonyms
-  (`delete` ↔ *remove*, `clipboard` ↔ *pasteboard*, …).
+- Forgiving: prefixes (`compress` → _compression_), stems (`deleting` →
+  _delete_), one or two typos, and a small table of synonyms
+  (`delete` ↔ _remove_, `clipboard` ↔ _pasteboard_, …).
 - Filler words ("how do I…") are ignored.
 
 ## Index
