@@ -96,3 +96,7 @@ rebuilt automatically when `$PATH` changes, when anything is installed into or
 removed from a `$PATH` directory, or after a week. Building takes about a second.
 Changes to your aliases or shell functions aren't detected, so run
 `hmm --reindex` after editing your shell config.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
